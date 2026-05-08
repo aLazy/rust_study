@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "one_thread"
+name = "threads"
 version = "0.1.0"

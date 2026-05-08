@@ -1,2 +1,2 @@
 [workspace]
-members = ["one_thread"]
+members = ["threads"]
