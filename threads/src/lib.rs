@@ -1,33 +1,51 @@
-use std::thread;
-/*
-std::thread::functions
-pub fn spawn<F, T>(f: F) -> JoinHandle<T>
-where
-    F: FnOnce() -> T,
-    F: Send + 'static,
-    T: Send + 'static,
- */
-pub struct ThreadPool
-{
-    threads: Vec<thread::JoinHandle<()>>,
+use std:: {
+    thread,
+    sync::{mpsc, Arc, Mutex}
+};
+
+struct Worker {
+    id: usize,
+    thread:thread::JoinHandle<()>,
+}
+impl Worker {
+    fn new(id:usize, receiver:Arc<Mutex<mpsc::Receiver<Jop>>>) ->Self{
+        let thread = thread::spawn(move|| {
+            loop {
+                let message = receiver.lock().unwrap().recv();
+                match message {
+                    Ok(jop) => jop(),
+                    Err(_) => break,
+                }
+            }
+        });
+        Self {
+            id,
+            thread,
+        }
+    }
 }
 
+type Jop = Box<dyn FnOnce() + Send + 'static>;
+
+pub struct ThreadPool {
+    workers:Vec<Worker>,
+    sender: mpsc::Sender<Jop>,
+}
 
 impl ThreadPool {
-    pub fn new (num_threads: usize)->Self {
+    pub fn new(num_threads:usize)->Self {
         assert!(num_threads > 0);
-        let mut threads = Vec::with_capacity(num_threads);
-        for _ in 0..num_threads {
-            threads.push(thread::spawn(move || {}));
+        let (sender, receiver) = mpsc::channel();
+        let mut workers = Vec::with_capacity(num_threads);
+        let receiver = Arc::new(Mutex::new(receiver));
+        for id in 0..num_threads {
+            let worker = Worker::new(id, receiver.clone());
+            workers.push(worker);
         }
         Self {
-            threads
+            workers,
+            sender,
         }
     }
-
-    pub fn execute<F>(&self, f:F)
-    where F:FnOnce() + Send +'static 
-    {
-
-    }
 }
+
