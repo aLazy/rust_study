@@ -1,2 +1,2 @@
 [workspace]
-members = ["threads"]
+members = ["rust_rda","threads"]
